@@ -1,5 +1,11 @@
 # Modèle de données — `data/pac.zarr`
 
+> **Sources (ADEME, ouvertes)** — mesures :
+> <https://data.ademe.fr/datasets/pac-campagne-de-mesure-100-pacs> ·
+> rapport :
+> <https://librairie.ademe.fr/batiment/8617-mesure-des-performances-de-100-pac-air-eau-et-eau-eau-installees-en-maisons-individuelles.html>
+> Reproduction : voir le [README](../README.md#sources-de-données-ademe-ouvertes).
+
 Modèle xarray/Zarr (v3) construit par [`backend/scripts/ingest-data`](../backend/scripts/ingest-data)
 (module `chatbot.data.ingest`) à partir des fichiers de référence (métadonnées,
 dictionnaire) et d'un répertoire de journaux `log_<id>.csv` (un par logement). Couvre

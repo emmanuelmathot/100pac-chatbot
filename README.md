@@ -19,13 +19,36 @@ Development Seed, [EGU26-19885](https://meetingorganizer.copernicus.org/EGU26/EG
   `query_measurement`, `plot_measurement`, `run_data_analysis` (analyse par code en bac
   à sable). API FastAPI (stream NDJSON) + UI Streamlit.
 
+## Sources de données (ADEME, ouvertes)
+
+Le projet s'appuie sur des données publiques de la campagne ADEME/Enertech :
+
+- **Jeu de mesures** (100 journaux `log_<id>.csv` au pas 1 min + fichiers de référence
+  métadonnées/dictionnaire) :
+  <https://data.ademe.fr/datasets/pac-campagne-de-mesure-100-pacs>
+- **Rapport d'audit** (PDF, 245 p.) :
+  <https://librairie.ademe.fr/batiment/8617-mesure-des-performances-de-100-pac-air-eau-et-eau-eau-installees-en-maisons-individuelles.html>
+
+### Reproduire
+
+1. Télécharger le rapport → `docs/Performance-PAC-Rapport-final.pdf`.
+2. Télécharger le jeu de mesures ; placer les `PAC 2025 - *.xlsx` (métadonnées,
+   dictionnaire, description) dans `data/` et les journaux `log_*.csv` dans un dossier
+   (ex. `data/` ou un répertoire dédié).
+3. Lancer l'ingestion (cf. ci-dessous) en pointant sur le dossier des journaux.
+
+Ces fichiers sont volumineux et **non versionnés** (cf. `.gitignore`).
+
 ## Démarrage rapide
 
 ```bash
 cd backend
 cp .env.example .env          # renseigner MISTRAL_API_KEY
 scripts/install               # uv sync + install editable
-scripts/ingest-data           # construit data/pac.zarr (lit les xlsx)
+
+# Ingestion des journaux 1 min -> data/pac.zarr (CSV par logement).
+# Par défaut lit data/ ; sinon préciser le dossier ou PAC_LOGS_DIR.
+scripts/ingest-data /chemin/vers/les/log_csv
 scripts/build-index           # construit l'index vectoriel du rapport
 
 scripts/api                   # terminal 1 — API   http://localhost:8000
