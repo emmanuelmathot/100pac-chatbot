@@ -63,9 +63,11 @@ async def compare_fleet_performance(
     """Compare le COP réel moyen du parc, regroupé par un attribut des logements.
 
     Idéal pour « performance moyenne des PAC air/eau vs géothermiques » : agrège le COP
-    réel mesuré de chaque logement par ``group_by`` (par défaut ``type_source_froide`` :
-    air/eau vs eau/eau) et le compare au SCOP déclaré moyen. ``heating_season_only=true``
-    recommandé. Autres regroupements possibles : ``type_pac``, ``departement``, ``fluide_frigorigene``.
+    réel mesuré de chaque logement par ``group_by`` et le compare au SCOP déclaré moyen.
+    ``group_by`` est libre : **n'importe quel attribut du parc** (colonne de
+    describe_fleet) — par défaut ``type_source_froide`` (air/eau vs eau/eau), aussi
+    ``type_pac``, ``departement``, ``fluide_frigorigene``, ``emetteurs``...
+    ``heating_season_only=true`` recommandé.
     """
     return _dump(
         analytics.fleet_performance(
@@ -98,6 +100,62 @@ async def query_measurement(
             resolution=resolution,
             how=how,
         )
+    )
+
+
+@tool("plot_fleet_metric")
+async def plot_fleet_metric(
+    tool_call_id: Annotated[str, InjectedToolCallId],
+    metric: str = "cop",
+    resolution: str = "monthly",
+    group_by: Optional[str] = None,
+    heating_season_only: bool = False,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> Command:
+    """Trace une métrique AGRÉGÉE SUR TOUT LE PARC dans le temps et l'affiche.
+
+    À utiliser pour « le COP moyen de tous les logements par mois », « la consommation
+    totale du parc »... ``metric="cop"`` calcule le COP de l'ensemble par pas de temps
+    (Σ thermique net / Σ électrique). Autre ``metric`` : un canal (``pac``,
+    ``elec_energy_wh``, ``t_meteo``...) agrégé sur les logements.
+    ``group_by`` est libre : **n'importe quel attribut du parc** (colonne de
+    describe_fleet), ex. ``type_source_froide`` (air/eau vs géothermie), ``type_pac``,
+    ``departement``, ``fluide_frigorigene`` -> une courbe par valeur du groupe.
+    ``resolution`` ∈ daily|monthly recommandé (raw/hourly trop bruités à l'échelle parc).
+    """
+    png = analytics.fleet_metric_png(
+        metric,
+        resolution=resolution,
+        group_by=group_by,
+        start=start,
+        end=end,
+        heating_season_only=heating_season_only,
+    )
+    return Command(
+        update={
+            "plot": Base64Image(data=png),
+            "provenance": [
+                {
+                    "tool": "plot_fleet_metric",
+                    "metric": metric,
+                    "resolution": resolution,
+                    "group_by": group_by,
+                    "heating_season_only": heating_season_only,
+                    "period": [start, end],
+                }
+            ],
+            "messages": [
+                ToolMessage(
+                    content=(
+                        f"Graphe parc '{metric}' ({resolution}"
+                        + (f", par {group_by}" if group_by else "")
+                        + ") produit et affiché."
+                    ),
+                    tool_call_id=tool_call_id,
+                )
+            ],
+        }
     )
 
 

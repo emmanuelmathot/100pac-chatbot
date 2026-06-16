@@ -105,6 +105,13 @@ async def run_data_analysis(
         status = "ok"
     except Exception as e:  # noqa: BLE001 — on renvoie l'erreur au modèle
         content = f"Erreur d'exécution : {type(e).__name__}: {e}"
+        if isinstance(e, ImportError):
+            content += (
+                " — les imports sont interdits ici. np/pd et les datasets "
+                "(fleet, raw, hourly, daily, monthly) sont déjà disponibles. "
+                "Pour produire un graphique, utilise plutôt les tools plot_measurement "
+                "ou plot_fleet_metric."
+            )
         status = "error"
 
     return Command(

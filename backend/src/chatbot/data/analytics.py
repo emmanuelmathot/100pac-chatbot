@@ -198,6 +198,110 @@ def fleet_performance(
     }
 
 
+def fleet_metric_series(
+    metric: str = "cop",
+    *,
+    resolution: str = "daily",
+    group_by: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    heating_season_only: bool = False,
+) -> pd.DataFrame:
+    """Série temporelle agrégée sur le parc (toutes installations confondues).
+
+    ``metric="cop"`` : COP de l'ensemble par pas de temps = Σ énergie thermique nette
+    / Σ énergie électrique sur les logements (ratio des sommes, physiquement correct).
+    Sinon, agrège la variable sur les logements (somme pour les énergies, moyenne
+    sinon). ``group_by`` (ex. ``type_source_froide``) trace une courbe par groupe.
+    Retourne un DataFrame (index = temps, colonnes = groupes).
+    """
+    ds = _sel_time(access.measurements(resolution), start, end)
+    if heating_season_only:
+        ds = ds.where(ds["time"].dt.month.isin(list(HEATING_MONTHS)), drop=True)
+    times = pd.to_datetime(ds["time"].values)
+    ids = [str(x) for x in ds.logement.values]
+
+    # Partition des logements en groupes (un seul groupe « ensemble » par défaut).
+    if group_by is None:
+        groups = {"ensemble": ids}
+    else:
+        fleet = access.fleet_dataframe()
+        if group_by not in fleet.columns:
+            raise KeyError(f"attribut de regroupement inconnu {group_by!r}")
+        labels = fleet.reindex(ids)[group_by].astype(str)
+        groups = {
+            g: [i for i in ids if labels.get(i) == g] for g in sorted(labels.unique())
+        }
+
+    out = {}
+    for name, members in groups.items():
+        sub = ds.sel(logement=members)
+        if metric == "cop":
+            net = sub["thermal_net_wh"].sum("logement")
+            elec = sub["elec_energy_wh"].sum("logement")
+            values = xr.where(elec > 0, net / elec, np.nan).values
+        else:
+            da = sub[metric]
+            reduced = (
+                da.sum("logement")
+                if _agg_kind_for(metric) == "sum"
+                else da.mean("logement")
+            )
+            values = reduced.values
+        out[name] = values
+    return pd.DataFrame(out, index=times)
+
+
+def _agg_kind_for(var: str) -> str:
+    """Somme pour les énergies (``cc_*`` / ``*_wh``), moyenne sinon."""
+    return "sum" if var.startswith("cc_") or var.endswith("_wh") else "mean"
+
+
+def fleet_metric_png(
+    metric: str = "cop",
+    *,
+    resolution: str = "daily",
+    group_by: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    heating_season_only: bool = False,
+) -> str:
+    """Trace une métrique agrégée sur le parc -> PNG base64 (une courbe par groupe)."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    df = fleet_metric_series(
+        metric,
+        resolution=resolution,
+        group_by=group_by,
+        start=start,
+        end=end,
+        heating_season_only=heating_season_only,
+    )
+    fig, ax = plt.subplots(figsize=(9, 3.5))
+    for col in df.columns:
+        ax.plot(df.index, df[col], linewidth=1.0, label=str(col))
+    unit = (
+        "-"
+        if metric == "cop"
+        else access.measurements(resolution)[metric].attrs.get("units", "")
+    )
+    ax.set_title(f"{metric} — parc 100PAC ({resolution})")
+    ax.set_ylabel(unit)
+    ax.grid(True, alpha=0.3)
+    if group_by:
+        ax.legend(fontsize=8)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=110)
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
 def timeseries_png(
     variable: str,
     *,

@@ -60,6 +60,23 @@ def test_fleet_performance_groups_by_source(synthetic_store):
     assert r["groupes"]["air/eau"]["scop_declare_moyen"] == 4.0
 
 
+def test_fleet_metric_series_cop(synthetic_store):
+    # COP de l'ensemble par jour = Σnet/Σélec ; seul A a des données.
+    df = analytics.fleet_metric_series("cop", resolution="daily")
+    assert list(df.columns) == ["ensemble"]
+    # Jours de janvier : net 2000 / élec 1000 = 2.0 ; juillet : -500/1000 = -0.5.
+    assert df["ensemble"].iloc[0] == 2.0
+    assert df["ensemble"].iloc[-1] == -0.5
+
+
+def test_fleet_metric_series_grouped(synthetic_store):
+    df = analytics.fleet_metric_series(
+        "cop", resolution="daily", group_by="type_source_froide"
+    )
+    assert "air/eau" in df.columns  # A est air/eau
+    assert df["air/eau"].iloc[0] == 2.0
+
+
 def test_select_logements_filter(synthetic_store):
     from chatbot.data import access
 

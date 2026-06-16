@@ -135,3 +135,18 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
   (state `plot`) avec citation « Figure N (p. X) ». Branché à l'agent + prompt.
 - Validé E2E : « montre la figure du COP saisonnier de chauffage » → Figure 73 p.93.
 - Tests `test_figures` (PDF committé, sans clé). 20 tests + lint + mypy verts.
+
+## 2026-06-16 — Graphes agrégés sur le parc
+
+- Constat (retour utilisateur) : `run_data_analysis` ne sait pas tracer (renvoie du texte)
+  et son bac à sable bloque les `import` (`ImportError: __import__ not found`) ; aucun outil
+  ne traçait une **série agrégée sur tout le parc** (ex. COP moyen journalier de l'ensemble).
+- `analytics.fleet_metric_series` / `fleet_metric_png` : série temporelle agrégée sur le parc.
+  `metric="cop"` = Σ thermique net / Σ élec (ratio des sommes) ; autre métrique agrégée
+  (somme énergies, moyenne sinon). `group_by` **libre** (tout attribut du parc) → une courbe
+  par groupe (air/eau vs géothermie...).
+- Outil **`plot_fleet_metric`** (paramètres : metric, resolution, group_by, heating_season_only,
+  période) branché à l'agent. Validé E2E : « COP moyen du parc par mois, air/eau vs géothermie ».
+- `group_by` rendu explicitement paramétrable aussi dans `compare_fleet_performance` (docstrings).
+- Message d'erreur du bac à sable amélioré (imports interdits → orienter vers les tools de tracé).
+- 22 tests + lint + mypy verts.

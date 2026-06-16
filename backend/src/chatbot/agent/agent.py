@@ -10,6 +10,7 @@ from chatbot.tools.data import (
     compare_fleet_performance,
     compute_performance,
     describe_fleet,
+    plot_fleet_metric,
     plot_measurement,
     query_measurement,
 )
@@ -55,6 +56,7 @@ async def create_agent() -> CompiledStateGraph:
         compute_performance,
         query_measurement,
         plot_measurement,
+        plot_fleet_metric,
         run_data_analysis,
     ]
 
