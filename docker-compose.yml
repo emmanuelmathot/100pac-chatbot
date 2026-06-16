@@ -17,7 +17,8 @@ services:
       PAC_REPORT_PDF: /data/report.pdf
     volumes:
       - ${PAC_ZARR_HOST:-./data/pac.zarr}:/data/pac.zarr:ro
-      - ${PAC_CHROMA_HOST:-./backend/store/chroma}:/data/chroma:ro
+      # Chroma = SQLite : besoin d'écriture (fichiers -wal/-shm), donc PAS de :ro.
+      - ${PAC_CHROMA_HOST:-./backend/store/chroma}:/data/chroma
       - ${PAC_REPORT_HOST:-./docs/Performance-PAC-Rapport-final.pdf}:/data/report.pdf:ro
     ports:
       - "${API_PORT:-8000}:8000"

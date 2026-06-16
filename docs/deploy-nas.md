@@ -104,6 +104,8 @@ redémarrer : `docker compose restart api`.
 ## Notes
 
 - Ressources : prévoir ~1–2 Go de RAM pour l'API (ouverture lazy du Zarr + index).
-- Les volumes sont montés en lecture seule ; l'application n'écrit pas les artefacts.
+- Le Zarr et le rapport sont montés en lecture seule ; **l'index Chroma doit être
+  monté en lecture-écriture** (SQLite crée des fichiers `-wal`/`-shm`, échoue sinon
+  avec « attempt to write a readonly database »).
 - Pour exposer en HTTPS, placez un reverse proxy (Traefik / Nginx Proxy Manager,
   souvent disponibles sur NAS) devant les ports 8000/8501.
