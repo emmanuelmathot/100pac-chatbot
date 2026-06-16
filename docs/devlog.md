@@ -54,3 +54,19 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - Recherche sémantique testée : passages pertinents renvoyés avec leur source.
 - Clé Mistral fournie par l'utilisateur → `backend/.env` (gitignoré, jamais committé).
 - lint + mypy verts.
+
+## 2026-06-16 — Phase 3 : agent, tools, state
+
+- `chatbot.data.analytics` : logique métier pure (fleet_summary, performance COP/SCOP,
+  aggregate, timeseries_png) — testable hors LangChain.
+- Tools (pattern `@tool` + `Command`) :
+  - `search_report` (RAG, citations section/page → state `citations`).
+  - `describe_fleet`, `compute_performance`, `query_measurement` (résultats JSON compacts).
+  - `plot_measurement` (PNG base64 → state `plot`, rendu image dans l'UI).
+  - `run_data_analysis` : **analyse par code** en environnement restreint (datasets read-only,
+    builtins limités, pas d'import/IO), code persisté en `provenance`.
+- `AgentState` étendu : `plot`, `citations`, `provenance`. Tool d'exemple `cat.py` supprimé.
+- `SYSTEM_PROMPT` : rôle analyste PAC, orchestration only, citations obligatoires, COP de saison.
+- **Test E2E (Mistral)** : « combien de géothermiques ? » → describe_fleet → 10 ;
+  « COP réel saison 002026 vs déclaré ? » → compute_performance → 2.26 vs 4.43. ✓
+- lint + mypy verts.
