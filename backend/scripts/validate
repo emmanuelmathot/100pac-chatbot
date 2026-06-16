@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+set -e
+
+# Fait tourner l'agent sur un jeu de questions de référence (LLM live) et affiche
+# pour chacune les outils appelés et la réponse. Voir docs/validation.md.
+uv run python -m chatbot.validate

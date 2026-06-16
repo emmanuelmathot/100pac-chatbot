@@ -80,3 +80,16 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
   - Question graphe → `plot_measurement` → `state_change.plot` (image/png 90k) + `provenance` → réponse.
   - Question rapport → `search_report` → `state_change.citations` (page+section) → réponse synthétique.
 - lint complet (ruff check + format) + mypy (24 fichiers) verts.
+
+## 2026-06-16 — Phase 5 : tests & validation
+
+- Tests unitaires déterministes (store Zarr synthétique en fixture, sans LLM) :
+  ingestion (énergies), analytics (COP, filtre saison, filtrage parc), métadonnées,
+  bac à sable du tool d'analyse (import/open bloqués). **17 tests verts.**
+- Harnais `scripts/validate` (LLM live) sur 5 questions de référence : **5/5** déclenchent
+  l'outil attendu, réponses cohérentes (10 géothermiques, COP 2.26 vs 4.43, 5530 kWh/an...).
+- Affinages issus de la validation :
+  - prompt : `heating_season_only` réservé au COP ; énergie totale sur période complète.
+  - `compute_performance` renvoie `period_effective` (vraies bornes) → plus de dates inventées.
+- [validation.md](validation.md) documente le dispositif et la conformité aux principes.
+- Bruit des warnings Zarr v3 filtré dans la config pytest.

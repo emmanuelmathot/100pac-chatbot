@@ -110,6 +110,11 @@ def performance(
     net_wh = float(d["thermal_net_wh"].sum())
     cop = net_wh / elec_wh if elec_wh > 0 else float("nan")
 
+    # Bornes réelles des données retenues (évite que le modèle invente des dates).
+    times = pd.to_datetime(d["time"].values)
+    date_min = str(times.min().date()) if len(times) else None
+    date_max = str(times.max().date()) if len(times) else None
+
     fleet = access.fleet_dataframe()
     declared = None
     if logement in fleet.index:
@@ -120,7 +125,8 @@ def performance(
 
     return {
         "logement": logement,
-        "period": [start, end],
+        "period_requested": [start, end],
+        "period_effective": [date_min, date_max],
         "heating_season_only": heating_season_only,
         "elec_kwh": round(elec_wh / 1000, 1),
         "thermal_calo_kwh": round(calo_wh / 1000, 1),
