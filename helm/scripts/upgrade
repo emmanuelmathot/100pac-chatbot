@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+set -e
+
+TAG="latest"
+
+for arg in "$@"; do
+  case "$arg" in
+    --tag=*)
+      TAG="${arg#--tag=}"
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      echo "Usage: $0 [--tag=<TAG>]"
+      exit 1
+      ;;
+  esac
+done
+
+helm upgrade \
+  chatbot ./chatbot \
+  -n chatbot \
+  --create-namespace \
+  --install \
+  --set chatbot.api.image.tag="$TAG"

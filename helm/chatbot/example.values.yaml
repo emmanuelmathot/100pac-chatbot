@@ -1,0 +1,31 @@
+chatbot:
+  config:
+    enable_tls: true
+  api:
+    host: api.dev-sprint-loic.ds.io
+    resources:
+      requests:
+        cpu: 250m
+        memory: 500Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    image:
+      repository: 6i7451y2.c1.de1.container-registry.ovh.net/dev-sprint-loic/api
+      tag: latest
+  chat:
+    host: chat.dev-sprint-loic.ds.io
+    resources:
+      requests:
+        cpu: 250m
+        memory: 500Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+  secrets:
+    api:
+      MISTRAL_API_KEY: "<REPLACE_WITH_YOUR_API_KEY>"
+
+registry:
+  secrets:
+    dockerconfigjson: '{"auths":{"6i7451y2.c1.de1.container-registry.ovh.net": {"username":"poOaMvpTaX", "password": "<REPLACE_WITH_PASSWORD>"}}}'

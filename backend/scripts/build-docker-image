@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+
+set -e
+
+TAG="latest"
+PUSH=false
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --tag)
+      TAG="$2"
+      shift 2
+      ;;
+    --push)
+      PUSH=true
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+LOCAL_IMAGE="dev-sprint-loic"
+REGISTRY="6i7451y2.c1.de1.container-registry.ovh.net/dev-sprint-loic/api"
+TAGGED_IMAGE="$REGISTRY:$TAG"
+LATEST_IMAGE="$REGISTRY:latest"
+
+DOCKER_DEFAULT_PLATFORM="linux/amd64" docker build -t "$LOCAL_IMAGE" .
+
+docker tag "$LOCAL_IMAGE" "$TAGGED_IMAGE"
+
+if [ "$TAG" != "latest" ]; then
+  docker tag "$LOCAL_IMAGE" "$LATEST_IMAGE"
+fi
+
+if [ "$PUSH" = true ]; then
+  docker push "$TAGGED_IMAGE"
+
+  if [ "$TAG" != "latest" ]; then
+    docker push "$LATEST_IMAGE"
+  fi
+fi
