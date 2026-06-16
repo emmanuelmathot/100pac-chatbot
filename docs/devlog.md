@@ -150,3 +150,14 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - `group_by` rendu explicitement paramétrable aussi dans `compare_fleet_performance` (docstrings).
 - Message d'erreur du bac à sable amélioré (imports interdits → orienter vers les tools de tracé).
 - 22 tests + lint + mypy verts.
+
+## 2026-06-17 — Robustesse appels d'outils parallèles
+
+- Bug (« Quelles conclusions générales… ») : plusieurs `search_report` dans une même
+  étape → `InvalidUpdateError` (écritures concurrentes sur `citations`).
+  Correctif : **reducers** sur l'état (`_concat` pour citations/provenance, `_take_last`
+  pour plot) — fusion au lieu de conflit.
+- Puis erreur Mistral 400 « Duplicate tool call id » : `mistral-small` génère des id
+  dupliqués en appels parallèles. Correctif : `bind_tools(..., parallel_tool_calls=False)`
+  dans l'agent → un outil à la fois, séquentiellement.
+- Question rejouée : OK (1 appel, 4 citations, réponse synthétique). Tests/lint/mypy verts.

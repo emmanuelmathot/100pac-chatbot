@@ -9,12 +9,28 @@ class Base64Image(BaseModel):
     data: str
 
 
+def _take_last(left: Any, right: Any) -> Any:
+    """Reducer : conserve la dernière valeur non nulle (ex. dernier graphe)."""
+    return right if right is not None else left
+
+
+def _concat(left: Any, right: Any) -> Any:
+    """Reducer : concatène deux listes (gère les valeurs nulles).
+
+    Indispensable quand plusieurs outils du même tour (appels parallèles) mettent à
+    jour la même clé — LangGraph exige sinon une seule écriture par étape.
+    """
+    if not left:
+        return right or left
+    if not right:
+        return left
+    return list(left) + list(right)
+
+
 class AgentState(AgentStatePydantic):
     # Dernier graphe produit par un data tool (rendu comme image dans l'UI).
-    plot: Optional[
-        Annotated[Base64Image, "Graphe PNG (base64) produit par un tool"]
-    ] = None
-    # Citations du rapport (section + page) accompagnant la dernière réponse.
-    citations: Optional[list[dict[str, Any]]] = None
+    plot: Annotated[Optional[Base64Image], _take_last] = None
+    # Citations du rapport (section + page) — concaténées si plusieurs recherches.
+    citations: Annotated[Optional[list[dict[str, Any]]], _concat] = None
     # Provenance : code/requêtes exécutés par les tools data (auditabilité).
-    provenance: Optional[list[dict[str, Any]]] = None
+    provenance: Annotated[Optional[list[dict[str, Any]]], _concat] = None

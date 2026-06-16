@@ -62,8 +62,13 @@ async def create_agent() -> CompiledStateGraph:
 
     checkpointer = InMemorySaver()
 
+    # mistral-small génère parfois des id d'appels d'outils dupliqués quand il
+    # appelle plusieurs outils en parallèle (-> 400 « Duplicate tool call id »).
+    # On désactive les appels parallèles : un outil à la fois, séquentiellement.
+    model = mistral_small.bind_tools(tools, parallel_tool_calls=False)
+
     return create_react_agent(
-        mistral_small,
+        model,
         tools,
         prompt=SYSTEM_PROMPT,
         checkpointer=checkpointer,
