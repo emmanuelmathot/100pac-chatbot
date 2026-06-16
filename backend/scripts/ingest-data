@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+set -e
+
+# Construit le modèle de données Zarr (data/pac.zarr) à partir des fichiers source.
+uv run python -m chatbot.data.ingest
