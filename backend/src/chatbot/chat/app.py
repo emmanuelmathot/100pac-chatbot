@@ -13,26 +13,87 @@ load_dotenv()
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 
 
+st.set_page_config(page_title="Chatbot 100PAC", page_icon="🔥", layout="wide")
 st.session_state.setdefault("messages", [])
-
-with st.container(horizontal=True, horizontal_alignment="right"):
-    # New chat button
-    if st.button("New chat", key="new-chat"):
-        st.session_state.thread_id = str(uuid.uuid4())
-        st.session_state.messages = []
-        st.rerun()
-
-st.title("🔥 Chatbot 100PAC")
-st.caption(
-    "Posez vos questions sur l'audit ADEME/Enertech de 100 pompes à chaleur "
-    "(rapport + mesures). Les réponses s'appuient sur des outils et citent leurs sources."
-)
 
 # ---- App state ----
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+st.title("🔥 Chatbot 100PAC")
+st.caption(
+    "Assistant sur l'audit ADEME/Enertech de 100 pompes à chaleur (rapport + mesures). "
+    "Chaque réponse s'appuie sur des outils et cite ses sources."
+)
+
+# ---- Questions d'exemple (cliquables) ----
+EXAMPLES = {
+    "📄 Le rapport d'audit": [
+        "Comment le rapport définit-il le SCOP et le COP de Carnot ?",
+        "Quelles sont les principales causes de sous-performance des PAC ?",
+        "Que conclut le rapport sur les pompes à chaleur géothermiques ?",
+    ],
+    "🏠 Le parc (100 logements)": [
+        "Combien de PAC géothermiques compte l'étude ?",
+        "Quelle est la répartition des logements par département ?",
+        "Quel est le SCOP déclaré moyen du parc ?",
+    ],
+    "📊 Performances mesurées": [
+        "COP réel de saison de chauffe du logement 002026 vs SCOP déclaré ?",
+        "Compare la performance réelle des PAC air/eau et géothermiques",
+        "Quelle est la consommation électrique annuelle du logement 011088 ?",
+    ],
+    "📈 Graphiques & figures": [
+        "Trace le COP mensuel du parc, air/eau vs géothermique",
+        "Trace la température météo du logement 002026",
+        "Montre le graphique du COP saisonnier de chauffage du rapport",
+    ],
+}
+
+
+def submit(question: str) -> None:
+    st.session_state["pending_prompt"] = question
+
+
+# ---- Barre latérale : guide & sources ----
+with st.sidebar:
+    st.header("🔥 Chatbot 100PAC")
+    st.markdown(
+        "Posez une question en français, ou cliquez un exemple ci-dessous. "
+        "L'assistant **orchestre des outils** (recherche dans le rapport, calculs sur "
+        "les mesures, graphiques) — il **ne devine jamais** un chiffre et **cite ses sources**."
+    )
+
+    if st.button("🆕 Nouvelle conversation", use_container_width=True):
+        st.session_state.thread_id = str(uuid.uuid4())
+        st.session_state.messages = []
+        st.rerun()
+
+    st.subheader("Exemples de questions")
+    for category, questions in EXAMPLES.items():
+        with st.expander(category, expanded=category.startswith("📄")):
+            for q in questions:
+                st.button(
+                    q,
+                    key=f"ex-{q}",
+                    use_container_width=True,
+                    on_click=submit,
+                    args=(q,),
+                )
+
+    with st.expander("ℹ️ Comment ça marche / sources"):
+        st.markdown(
+            "**Sources de données (ADEME, ouvertes)**\n"
+            "- [Jeu de mesures (100 PAC)](https://data.ademe.fr/datasets/pac-campagne-de-mesure-100-pacs)\n"
+            "- [Rapport d'audit (PDF)](https://librairie.ademe.fr/batiment/8617-mesure-des-performances-de-100-pac-air-eau-et-eau-eau-installees-en-maisons-individuelles.html)\n\n"
+            "**Indicateurs** sous les réponses :\n"
+            "- 📈 Graphe · 📑 Citations du rapport (page) · 🔎 Traçabilité (requête/code)\n"
+            "- 🛠️ détaille l'outil appelé et son résultat brut.\n\n"
+            "Données : 100 logements, mesures au pas 1 min ; le COP réel se compare au "
+            "SCOP déclaré par le constructeur."
+        )
 
 
 # ---- Helpers ----
@@ -69,12 +130,15 @@ def handle_user_query(user_input: str):
         )
         response.raise_for_status()
     except Exception as e:
-        st.error(f"❌ Error connecting to API: {e}")
+        st.error(
+            f"❌ Impossible de joindre l'API ({API_BASE_URL}). "
+            f"Vérifiez que `scripts/api` tourne. Détail : {e}"
+        )
         return
 
     placeholder = st.empty()
     with placeholder.container():
-        st.chat_message("assistant", avatar="🤖").markdown("🤔 Thinking about that...")
+        st.chat_message("assistant", avatar="🤖").markdown("🤔 Je réfléchis…")
 
     try:
         for line in response.iter_lines(decode_unicode=True):
@@ -140,13 +204,25 @@ def handle_user_query(user_input: str):
             else:
                 st.session_state.messages.append({"role": role, "content": content})
     except requests.exceptions.ChunkedEncodingError:
-        st.warning("⚠️ The connection dropped early. Showing the partial response.")
+        st.warning("⚠️ Connexion interrompue ; réponse partielle affichée.")
     finally:
         try:
             response.close()
         except Exception:
             pass
 
+
+# ---- Accueil (conversation vide) ----
+if not st.session_state.messages and "pending_prompt" not in st.session_state:
+    st.info(
+        "👋 Bienvenue ! Je réponds à vos questions sur l'audit de **100 pompes à chaleur** "
+        "(rapport + mesures terrain).\n\n"
+        "Essayez un **exemple** dans la barre latérale, ou demandez par exemple : "
+        "*« Compare la performance réelle des PAC air/eau et géothermiques »*.\n\n"
+        "💡 Je peux **chercher dans le rapport** (avec citations), **calculer des COP/SCOP**, "
+        "**tracer des graphiques** et **afficher des figures** du rapport.",
+        icon="🔥",
+    )
 
 # ---- Chat history ----
 for message in st.session_state.messages:
@@ -200,6 +276,9 @@ for message in st.session_state.messages:
         with st.chat_message(role, avatar=avatar):
             st.markdown(message["content"])
 
-# ---- Chat input ----
-if user_input := st.chat_input("Type your message here..."):
-    handle_user_query(user_input)
+# ---- Saisie / question d'exemple ----
+prompt = st.chat_input("Posez votre question sur le rapport ou les mesures…")
+if not prompt:
+    prompt = st.session_state.pop("pending_prompt", None)
+if prompt:
+    handle_user_query(prompt)
