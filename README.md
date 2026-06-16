@@ -68,7 +68,8 @@ scripts/validate  # questions de référence (LLM live) — voir docs/validation
 - **Docker Compose / NAS** (le plus simple) : [`docker-compose.yml`](docker-compose.yml)
   lance l'API + l'UI depuis la même image, artefacts montés en volumes. Guide :
   [docs/deploy-nas.md](docs/deploy-nas.md). Image publiée sur GHCR par le workflow
-  [docker-publish.yml](.github/workflows/docker-publish.yml).
+  [docker-publish.yml](.github/workflows/docker-publish.yml). Exposition HTTPS via
+  Traefik (provider fichier) : [deploy/traefik/](deploy/traefik/).
 - **Kubernetes / Helm** : chart dans [helm/](helm/) (Deployments api+chat, services,
   ingress TLS, secret, PVC) — voir [helm/README.md](helm/README.md).
 - **CI** : ruff + mypy + pytest ([ci.yml](.github/workflows/ci.yml)).

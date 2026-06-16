@@ -62,6 +62,36 @@ docker compose ps        # api doit être "healthy"
 
 L'UI joint l'API via le réseau interne de compose (`API_BASE_URL=http://api:8000`).
 
+## Exposition HTTPS via Traefik (VPS, provider fichier)
+
+Si un **Traefik** tourne sur un VPS et route vers le NAS par hostname (provider
+fichier), le chatbot tourne sur le NAS (compose ci-dessus, UI publiée sur
+`CHAT_PORT`) et Traefik publie le domaine. Déposer
+[`deploy/traefik/100pac.mathot.org.yml`](../deploy/traefik/100pac.mathot.org.yml)
+dans `~/traefik/config/conf.d/` sur le VPS :
+
+```yaml
+http:
+  routers:
+    100pac:
+      rule: "Host(`100pac.mathot.org`)"
+      entryPoints: [websecure]
+      service: 100pac
+      tls:
+        certresolver: le
+  services:
+    100pac:
+      loadBalancer:
+        servers:
+          - url: "http://nas-manu-et:8501"   # NAS + CHAT_PORT
+```
+
+Adapter le hostname/port du backend au NAS et au `CHAT_PORT` publié. Traefik gère
+l'upgrade WebSocket de Streamlit ; côté UI, `--server.enableCORS=false` et
+`--server.enableXsrfProtection=false` sont déjà activés (TLS terminé par Traefik).
+Pointer l'enregistrement DNS `100pac.mathot.org` vers le VPS. L'API n'est pas exposée
+publiquement (l'UI la joint en interne).
+
 ## Mise à jour
 
 ```bash

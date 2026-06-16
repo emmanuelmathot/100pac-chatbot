@@ -172,3 +172,7 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - Workflow `.github/workflows/docker-publish.yml` : build + push sur **GHCR**
   (`ghcr.io/<owner>/100pac-chatbot`) sur `main`/tags, auth `GITHUB_TOKEN`, cache gha.
 - Guide [docs/deploy-nas.md](deploy-nas.md) + `.env.example` ; README mis à jour.
+- Exposition via le Traefik existant (VPS, **provider fichier**, certresolver `le`,
+  backend par hostname) : config dynamique `deploy/traefik/100pac.mathot.org.yml`
+  (route `100pac.mathot.org` -> `http://nas-manu-et:8501`), calquée sur `mail.mathot.org.yml`.
+  UI Streamlit : flags `enableCORS/enableXsrfProtection=false` ajoutés (TLS terminé par Traefik).

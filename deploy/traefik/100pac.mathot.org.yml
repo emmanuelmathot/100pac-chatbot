@@ -1,0 +1,25 @@
+# Configuration dynamique Traefik (provider fichier) pour le chatbot 100PAC.
+# À déposer sur le VPS dans ~/traefik/config/conf.d/100pac.mathot.org.yml
+#
+# Route https://100pac.mathot.org vers l'UI Streamlit qui tourne sur le NAS
+# (docker compose, port CHAT_PORT=8501). Même schéma que mail.mathot.org.yml.
+# Traefik gère l'upgrade WebSocket de Streamlit automatiquement.
+#
+# Adaptez le hostname/port du backend si besoin (doit correspondre au port publié
+# par le service `chat` sur le NAS).
+
+http:
+  routers:
+    100pac:
+      rule: "Host(`100pac.mathot.org`)"
+      entryPoints:
+        - websecure
+      service: 100pac
+      tls:
+        certresolver: le
+
+  services:
+    100pac:
+      loadBalancer:
+        servers:
+          - url: "http://nas-manu-et:8501"
