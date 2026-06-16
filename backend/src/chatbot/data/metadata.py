@@ -53,8 +53,9 @@ def _dedup(names: list[str]) -> list[str]:
 
 
 def _logement_id(header: str) -> str:
-    """``"Log. 001026"`` -> ``"001026"`` (conserve les zéros de tête)."""
-    return str(header).replace("Log.", "").strip()
+    """``"Log. 001026"`` -> ``"001026"``. Zéro-pad à 6 (Excel mange les zéros de tête)."""
+    s = str(header).replace("Log.", "").strip()
+    return s.zfill(6) if s.isdigit() else s
 
 
 def _coerce(value: object) -> object:

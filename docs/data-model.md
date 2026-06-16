@@ -1,9 +1,18 @@
 # Modèle de données — `data/pac.zarr`
 
 Modèle xarray/Zarr (v3) construit par [`backend/scripts/ingest-data`](../backend/scripts/ingest-data)
-(module `chatbot.data.ingest`) à partir des 4 fichiers source. Conçu pour les
-**100 logements** instrumentés et alimenté en séries temporelles pour les
-logements dont on possède le journal 1 min (actuellement `002026`).
+(module `chatbot.data.ingest`) à partir des fichiers de référence (métadonnées,
+dictionnaire) et d'un répertoire de journaux `log_<id>.csv` (un par logement). Couvre
+les **100 logements** instrumentés, avec séries temporelles au pas 1 min.
+
+Les journaux ont des **schémas hétérogènes** (un logement mesure l'ECS, un autre des
+sous-circuits de chauffage, un autre la géothermie...) : l'ingestion prend l'**union**
+des canaux (~48) et chaque logement remplit ce qu'il possède (`NaN` ailleurs). La grille
+temporelle est l'**union** des plages (les logements ne couvrent pas tous la même période ;
+hors couverture d'un logement → `NaN`).
+
+L'ingestion est **économe en mémoire** : le store est initialisé en lazy (dask) puis écrit
+**logement par logement** (region writes), sans jamais charger les 100 ensemble.
 
 ## Groupes
 
@@ -15,9 +24,16 @@ logements dont on possède le journal 1 min (actuellement `002026`).
 | `daily` | `logement × time` | Agrégats journaliers. |
 | `monthly` | `logement × time` | Agrégats mensuels. |
 
-La dimension `logement` du groupe `fleet` couvre les 100 logements ; les groupes
-de mesures ne couvrent que les logements disponibles. La jointure se fait par
-l'identifiant de logement (ex. `"002026"`).
+Tous les groupes partagent la dimension `logement` (100), indexée par l'identifiant
+de logement (ex. `"002026"`).
+
+### Agrégation des compteurs hétérogènes
+
+Pour l'énergie thermique, l'ingestion choisit par logement : compteur de chauffage
+**agrégé** `cc_chauffage_calo` s'il existe, sinon **somme des sous-circuits**
+(`cc_chauffage_{pl,rad,r1,rdc,reseau}_calo`) ; plus l'ECS (`cc_ecs_*`) et le compteur
+commun chauffage+ECS (`cc_ch_ecs_*`) quand les usages ne sont pas séparés. L'électricité
+totale somme `pac` + appoints (`resistance`, `resistance_chauffage`, `resistance_ecs`).
 
 ## Coordonnées statiques (`fleet`)
 
@@ -69,7 +85,24 @@ déjà compté dans la mesure thermique, à prendre en compte logement par logem
 
 ## Stockage
 
-Zarr v3 avec **sharding** : les groupes au pas minute sont découpés en
-`chunks = (1 logement, 1 jour)` regroupés en `shards = (tous logements, 1 jour)`
-→ **1 fichier de shard par jour et par variable** (≈ 367), ce qui borne le nombre
-de fichiers malgré 527 040 pas de temps. Compression Blosc par défaut.
+Zarr v3 avec **sharding par logement** : chunks internes `(1 logement, 1 jour)`
+regroupés en `shards = (1 logement, tout le temps)` → **1 fichier de shard par
+logement et par variable**. Ce choix permet des **écritures par région indépendantes**
+(un logement à la fois, sans amplification ni conflit) tout en bornant le nombre de
+fichiers. Compression Blosc par défaut.
+
+Ordre de grandeur (jeu complet 100 logements) : dimension `time` ≈ **733 020** pas
+(grille globale 2023-09 → 2025-02), ~54 variables, store ≈ **650 Mo**.
+
+## Échelle du parc — résultats indicatifs
+
+COP réel moyen de saison de chauffe (via `fleet_performance` / outil
+`compare_fleet_performance`) :
+
+| Type | n | COP réel moyen | SCOP déclaré moyen |
+|------|---|----------------|--------------------|
+| air/eau | 90 | ≈ 3,56 | 4,39 |
+| eau/eau (géothermie) | 10 | ≈ 4,03 | 5,02 |
+
+La géothermie surperforme l'aérothermie ; les deux restent sous le SCOP constructeur —
+constat central de l'audit.

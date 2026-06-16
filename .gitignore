@@ -204,8 +204,10 @@ values.yaml
 kubeconfig.yaml
 
 # 100PAC — données volumineuses & artefacts générés
-# Fichiers source xlsx (lourds, fournis hors VCS)
+# Fichiers source (lourds, fournis hors VCS) : métadonnées xlsx + journaux csv
 data/*.xlsx
+data/*.csv
+data/log_*/
 # Modèle de données généré (régénérable via scripts/ingest-data)
 data/pac.zarr/
 # Index vectoriel généré (régénérable via scripts/build-index)

@@ -29,8 +29,10 @@ ZARR_PATH = _env_path("PAC_ZARR_PATH", DATA_DIR / "pac.zarr")
 STORE_DIR = BACKEND_DIR / "store"
 CHROMA_DIR = _env_path("PAC_CHROMA_DIR", STORE_DIR / "chroma")
 
-# Sources brutes
-LOG_XLSX = DATA_DIR / "log_002026.xlsx"
+# Répertoire des journaux par logement (log_*.csv) — surchargeable via PAC_LOGS_DIR.
+LOGS_DIR = _env_path("PAC_LOGS_DIR", DATA_DIR)
+
+# Fichiers de référence (métadonnées du parc, dictionnaire des canaux).
 DICTIONARY_XLSX = DATA_DIR / "PAC 2025 - Dictionnaire des données.xlsx"
 METADATA_XLSX = DATA_DIR / "PAC 2025 - Métadonnées.xlsx"
 DESCRIPTION_XLSX = DATA_DIR / "PAC 2025 - Description des données brutes.xlsx"

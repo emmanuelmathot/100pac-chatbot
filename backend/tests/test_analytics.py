@@ -49,6 +49,17 @@ def test_unknown_logement_raises(synthetic_store):
         analytics.performance("ZZZ")
 
 
+def test_fleet_performance_groups_by_source(synthetic_store):
+    # Seul le logement A (air/eau) a des mesures ; saison de chauffe -> COP 2.0.
+    r = analytics.fleet_performance(
+        group_by="type_source_froide", heating_season_only=True
+    )
+    assert r["group_by"] == "type_source_froide"
+    assert r["groupes"]["air/eau"]["n_logements"] == 1
+    assert r["groupes"]["air/eau"]["cop_reel_moyen"] == 2.0
+    assert r["groupes"]["air/eau"]["scop_declare_moyen"] == 4.0
+
+
 def test_select_logements_filter(synthetic_store):
     from chatbot.data import access
 

@@ -7,6 +7,7 @@ from chatbot.agent.state import AgentState
 from chatbot.llm import mistral_small
 from chatbot.tools.analyze import run_data_analysis
 from chatbot.tools.data import (
+    compare_fleet_performance,
     compute_performance,
     describe_fleet,
     plot_measurement,
@@ -34,9 +35,11 @@ Règles impératives :
   heating_season_only=true (le COP estival n'a pas de sens) et compare au SCOP déclaré.
   En revanche, pour une CONSOMMATION ou une ÉNERGIE totale (kWh sur l'année), utilise
   heating_season_only=false (période complète) sauf si une période est précisée.
-- Une seule installation possède actuellement des séries temporelles détaillées
-  (logement 002026) ; les métadonnées couvrent les 100 logements. Si on te demande des
-  mesures sur un logement non instrumenté, dis-le clairement.
+- Les 100 logements disposent de séries temporelles détaillées (pas 1 min) et de
+  métadonnées. Les périodes couvertes diffèrent d'un logement à l'autre ; hors couverture,
+  les mesures sont absentes (utilise compute_performance/describe_fleet qui le gèrent).
+  Pour une question sur l'ensemble du parc (moyenne air/eau, etc.), utilise
+  run_data_analysis pour agréger sur les logements concernés via leurs métadonnées.
 - Si aucun outil ne permet de répondre, dis-le explicitement plutôt que d'inventer.
 """
 
@@ -45,6 +48,7 @@ async def create_agent() -> CompiledStateGraph:
     tools: list[BaseTool] = [
         search_report,
         describe_fleet,
+        compare_fleet_performance,
         compute_performance,
         query_measurement,
         plot_measurement,

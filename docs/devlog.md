@@ -107,3 +107,19 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - `helm/README.md` : procédure de déploiement + provisionnement des artefacts sur le PVC.
 - README racine réécrit (projet 100PAC). `helm lint` + `helm template` OK (PVC et emptyDir).
 - **Aucun déploiement effectif** (conforme à la portée retenue).
+
+## 2026-06-16 — Jeu complet des 100 logements
+
+- Réception des **100 journaux** `log_<id>.csv` (4,4 Go). Ingestion réécrite en
+  **streaming** (dask init lazy + region writes par logement) → mémoire bornée.
+  - Schémas **hétérogènes** gérés (union de 48 canaux, sous-circuits, ECS, géothermie) ;
+    grille temporelle globale 2023-09 → 2025-02 (~733 020 pas) ; hors couverture → NaN.
+  - Sharding **par logement** (1 fichier/logement/variable) pour des écritures indépendantes.
+  - Bascule CSV-only (suppression de l'ingestion xlsx du seul `002026`).
+- Correctif : `089034` (zéro de tête mangé par Excel dans les métadonnées) → `_logement_id`
+  zéro-pad à 6 + patch de la coord `fleet`. Jointure parc/mesures complète (100/100).
+- Nouvel outil **`compare_fleet_performance`** (+ `analytics.fleet_performance`) : COP réel
+  moyen par `type_source_froide`. Prompt agent mis à jour (100 logements instrumentés).
+- **Résultats parc** (saison de chauffe) : air/eau **COP 3,56** (déclaré 4,39),
+  géothermie **COP 4,03** (déclaré 5,02). Validé E2E via l'agent.
+- Store ≈ 650 Mo. Tests (18) + lint + mypy verts.

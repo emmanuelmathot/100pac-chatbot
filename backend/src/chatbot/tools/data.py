@@ -55,6 +55,25 @@ async def compute_performance(
     )
 
 
+@tool("compare_fleet_performance")
+async def compare_fleet_performance(
+    group_by: str = "type_source_froide",
+    heating_season_only: bool = True,
+) -> str:
+    """Compare le COP réel moyen du parc, regroupé par un attribut des logements.
+
+    Idéal pour « performance moyenne des PAC air/eau vs géothermiques » : agrège le COP
+    réel mesuré de chaque logement par ``group_by`` (par défaut ``type_source_froide`` :
+    air/eau vs eau/eau) et le compare au SCOP déclaré moyen. ``heating_season_only=true``
+    recommandé. Autres regroupements possibles : ``type_pac``, ``departement``, ``fluide_frigorigene``.
+    """
+    return _dump(
+        analytics.fleet_performance(
+            group_by=group_by, heating_season_only=heating_season_only
+        )
+    )
+
+
 @tool("query_measurement")
 async def query_measurement(
     variable: str,

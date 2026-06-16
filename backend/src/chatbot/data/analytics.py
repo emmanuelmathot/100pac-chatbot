@@ -142,6 +142,62 @@ def performance(
     }
 
 
+def fleet_performance(
+    *,
+    group_by: str = "type_source_froide",
+    heating_season_only: bool = True,
+) -> dict:
+    """COP réel agrégé sur le parc, regroupé par un attribut (ex. type de source froide).
+
+    Calcule le COP de chaque logement (énergie thermique nette / énergie électrique) sur
+    la période couverte, puis agrège par groupe : COP réel moyen mesuré vs SCOP déclaré
+    moyen, nombre de logements. Répond aux questions « performance moyenne des PAC air/eau ».
+    """
+    daily = access.measurements("daily")
+    if heating_season_only:
+        months = daily["time"].dt.month
+        daily = daily.where(months.isin(list(HEATING_MONTHS)), drop=True)
+
+    elec = daily["elec_energy_wh"].sum("time")
+    net = daily["thermal_net_wh"].sum("time")
+    cop = xr.where(elec > 0, net / elec, np.nan)
+
+    df = pd.DataFrame(
+        {
+            "logement": [str(x) for x in daily.logement.values],
+            "cop_reel": cop.values,
+            "elec_kwh": elec.values / 1000.0,
+        }
+    ).set_index("logement")
+
+    fleet = access.fleet_dataframe()
+    if group_by not in fleet.columns:
+        raise KeyError(f"attribut de regroupement inconnu {group_by!r}")
+    df[group_by] = fleet[group_by].astype(str)
+    df["scop_declare"] = pd.to_numeric(
+        fleet["scop_declare_basse_temperature"], errors="coerce"
+    )
+
+    groups = {}
+    for key, sub in df.groupby(group_by):
+        valid = sub["cop_reel"].replace([np.inf, -np.inf], np.nan).dropna()
+        groups[str(key)] = {
+            "n_logements": int(len(sub)),
+            "cop_reel_moyen": None if valid.empty else round(float(valid.mean()), 2),
+            "scop_declare_moyen": (
+                None
+                if sub["scop_declare"].dropna().empty
+                else round(float(sub["scop_declare"].mean()), 2)
+            ),
+            "conso_elec_moyenne_kwh": round(float(sub["elec_kwh"].mean()), 0),
+        }
+    return {
+        "group_by": group_by,
+        "heating_season_only": heating_season_only,
+        "groupes": groups,
+    }
+
+
 def timeseries_png(
     variable: str,
     *,
