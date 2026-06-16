@@ -20,9 +20,11 @@ from pydantic import SecretStr
 
 from chatbot import paths
 from chatbot.rag.extract import extract_pages
+from chatbot.rag.figures import Figure, extract_figures
 from chatbot.settings import get_settings
 
 COLLECTION = "rapport_pac"
+FIGURES_COLLECTION = "rapport_figures"
 CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 200
 
@@ -77,6 +79,24 @@ def build_index(batch_size: int = 64) -> int:
     for i in range(0, len(docs), batch_size):
         store.add_documents(docs[i : i + batch_size])
         print(f"  indexé {min(i + batch_size, len(docs))}/{len(docs)} fragments")
+
+    # Index dédié des légendes de figures/tableaux (pour le tool show_report_figure).
+    figures = extract_figures()
+    fig_store = Chroma(
+        collection_name=FIGURES_COLLECTION,
+        embedding_function=_embeddings(),
+        persist_directory=str(paths.CHROMA_DIR),
+    )
+    fig_docs = [
+        Document(
+            page_content=f.caption,
+            metadata={"kind": f.kind, "number": f.number, "page": f.page},
+        )
+        for f in figures
+    ]
+    for i in range(0, len(fig_docs), batch_size):
+        fig_store.add_documents(fig_docs[i : i + batch_size])
+    print(f"  indexé {len(fig_docs)} légendes de figures")
     return len(docs)
 
 
@@ -102,6 +122,25 @@ def search(query: str, k: int = 4) -> list[Passage]:
             text=d.page_content,
             page=int(d.metadata.get("page", 0)),
             section=str(d.metadata.get("section", "")),
+        )
+        for d in results
+    ]
+
+
+def search_figures(query: str, k: int = 1) -> list[Figure]:
+    """Recherche les figures/tableaux dont la légende correspond le mieux à la requête."""
+    store = Chroma(
+        collection_name=FIGURES_COLLECTION,
+        embedding_function=_embeddings(),
+        persist_directory=str(paths.CHROMA_DIR),
+    )
+    results = store.similarity_search(query, k=k)
+    return [
+        Figure(
+            kind=str(d.metadata.get("kind", "Figure")),
+            number=int(d.metadata.get("number", 0)),
+            caption=d.page_content,
+            page=int(d.metadata.get("page", 0)),
         )
         for d in results
     ]

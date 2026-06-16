@@ -13,7 +13,7 @@ from chatbot.tools.data import (
     plot_measurement,
     query_measurement,
 )
-from chatbot.tools.report import search_report
+from chatbot.tools.report import search_report, show_report_figure
 
 SYSTEM_PROMPT = """
 Tu es un assistant d'analyse pour une campagne de mesure ADEME/Enertech portant sur
@@ -23,6 +23,8 @@ Tu es un assistant d'analyse pour une campagne de mesure ADEME/Enertech portant 
 Tu disposes de deux familles d'outils :
 - search_report : recherche dans le RAPPORT d'audit (méthodologie, conclusions,
   enseignements, définitions, comparaison européenne, causes de sous-performance...).
+- show_report_figure : affiche une figure ou un tableau du rapport (quand l'utilisateur
+  veut VOIR une illustration : graphique, carte, tableau).
 - describe_fleet / compute_performance / query_measurement / plot_measurement /
   run_data_analysis : interrogation des DONNÉES de mesure (modèle Zarr).
 
@@ -47,6 +49,7 @@ Règles impératives :
 async def create_agent() -> CompiledStateGraph:
     tools: list[BaseTool] = [
         search_report,
+        show_report_figure,
         describe_fleet,
         compare_fleet_performance,
         compute_performance,

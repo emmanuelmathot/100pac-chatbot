@@ -13,7 +13,9 @@ from langchain_core.tools import tool
 from langchain_core.tools.base import InjectedToolCallId
 from langgraph.types import Command
 
-from chatbot.rag.index import search
+from chatbot.agent.state import Base64Image
+from chatbot.rag.figures import render_page_png
+from chatbot.rag.index import search, search_figures
 
 
 @tool("search_report")
@@ -55,5 +57,52 @@ async def search_report(
         update={
             "citations": citations,
             "messages": [ToolMessage(content=content, tool_call_id=tool_call_id)],
+        }
+    )
+
+
+@tool("show_report_figure")
+async def show_report_figure(
+    query: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+) -> Command:
+    """Affiche une figure ou un tableau du rapport correspondant à la demande.
+
+    À utiliser quand l'utilisateur veut **voir** une illustration du rapport
+    (« montre la figure des COP par température », « le graphique de répartition
+    géographique », « le tableau de l'échantillon »...). Retrouve la figure par sa
+    légende, rend la page correspondante et l'affiche. Réponds en mentionnant le
+    numéro de figure et la page.
+    """
+    matches = search_figures(query, k=1)
+    if not matches:
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content="Aucune figure correspondante trouvée dans le rapport.",
+                        tool_call_id=tool_call_id,
+                    )
+                ]
+            }
+        )
+    fig = matches[0]
+    png = render_page_png(fig.page)
+    return Command(
+        update={
+            "plot": Base64Image(data=png),
+            "citations": [
+                {
+                    "page": fig.page,
+                    "figure": f"{fig.kind} {fig.number}",
+                    "caption": fig.caption,
+                }
+            ],
+            "messages": [
+                ToolMessage(
+                    content=f"{fig.caption} (p. {fig.page}) — page affichée.",
+                    tool_call_id=tool_call_id,
+                )
+            ],
         }
     )

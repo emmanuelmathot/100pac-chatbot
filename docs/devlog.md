@@ -123,3 +123,15 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - **Résultats parc** (saison de chauffe) : air/eau **COP 3,56** (déclaré 4,39),
   géothermie **COP 4,03** (déclaré 5,02). Validé E2E via l'agent.
 - Store ≈ 650 Mo. Tests (18) + lint + mypy verts.
+
+## 2026-06-16 — Extraction des figures du rapport
+
+- `chatbot.rag.figures` : repérage des légendes numérotées (« Figure N : … »,
+  « Tableau N : … ») → 235 figures/tableaux uniques (page + légende) ; rendu de page
+  en PNG (PyMuPDF), adapté aux **graphiques vectoriels** (vs extraction d'image intégrée).
+- Index dédié des légendes (collection Chroma `rapport_figures`) construit par
+  `build-index` ; `search_figures(query)` pour la recherche sémantique.
+- Outil **`show_report_figure(query)`** : retrouve la figure, rend sa page, l'affiche
+  (state `plot`) avec citation « Figure N (p. X) ». Branché à l'agent + prompt.
+- Validé E2E : « montre la figure du COP saisonnier de chauffage » → Figure 73 p.93.
+- Tests `test_figures` (PDF committé, sans clé). 20 tests + lint + mypy verts.
