@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Dev Sprint API", lifespan=lifespan)
+app = FastAPI(title="100PAC Chatbot API", lifespan=lifespan)
 
 
 @app.get("/health")

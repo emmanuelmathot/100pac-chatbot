@@ -22,7 +22,11 @@ with st.container(horizontal=True, horizontal_alignment="right"):
         st.session_state.messages = []
         st.rerun()
 
-st.title("Dev Sprint Chatbot")
+st.title("🔥 Chatbot 100PAC")
+st.caption(
+    "Posez vos questions sur l'audit ADEME/Enertech de 100 pompes à chaleur "
+    "(rapport + mesures). Les réponses s'appuient sur des outils et citent leurs sources."
+)
 
 # ---- App state ----
 if "thread_id" not in st.session_state:
@@ -32,6 +36,17 @@ if "messages" not in st.session_state:
 
 
 # ---- Helpers ----
+STATE_LABELS = {
+    "plot": "📈 Graphe",
+    "citations": "📑 Citations du rapport",
+    "provenance": "🔎 Traçabilité (code / requêtes)",
+}
+
+
+def state_label(key: str) -> str:
+    return STATE_LABELS.get(key, key.replace("_", " ").title())
+
+
 def render_base64_image(data: str):
     image_data = base64.b64decode(data)
     image = Image.open(BytesIO(image_data))
@@ -75,7 +90,7 @@ def handle_user_query(user_input: str):
                 placeholder.empty()
                 with st.chat_message("state", avatar="📊"):
                     for key, value in state_payload.items():
-                        plain_label = key.replace("_", " ").title()
+                        plain_label = state_label(key)
                         if (
                             isinstance(value, dict)
                             and "type" in value
@@ -162,7 +177,7 @@ for message in st.session_state.messages:
             content = message["content"]
             if isinstance(content, dict):
                 for key, value in content.items():
-                    plain_label = key.replace("_", " ").title()
+                    plain_label = state_label(key)
                     if (
                         isinstance(value, dict)
                         and "type" in value

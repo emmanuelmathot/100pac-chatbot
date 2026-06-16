@@ -70,3 +70,13 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - **Test E2E (Mistral)** : « combien de géothermiques ? » → describe_fleet → 10 ;
   « COP réel saison 002026 vs déclaré ? » → compute_performance → 2.26 vs 4.43. ✓
 - lint + mypy verts.
+
+## 2026-06-16 — Phase 4 : API & UI
+
+- L'UI Streamlit rend déjà génériquement les `state_change` ; libellés localisés FR
+  (Graphe / Citations du rapport / Traçabilité), titres mis à jour (API + UI).
+- **Test API NDJSON** (uvicorn) bout en bout :
+  - `/health` OK.
+  - Question graphe → `plot_measurement` → `state_change.plot` (image/png 90k) + `provenance` → réponse.
+  - Question rapport → `search_report` → `state_change.citations` (page+section) → réponse synthétique.
+- lint complet (ruff check + format) + mypy (24 fichiers) verts.
