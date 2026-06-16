@@ -23,4 +23,4 @@ ADD ./src /app/src
 
 RUN uv pip install -e .
 
-CMD ["uv", "run", "uvicorn", "src.chatbot.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "chatbot.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

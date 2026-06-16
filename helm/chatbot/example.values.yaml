@@ -2,30 +2,48 @@ chatbot:
   config:
     enable_tls: true
   api:
-    host: api.dev-sprint-loic.ds.io
+    host: api.100pac.example.io
+    replicas: 1
     resources:
       requests:
         cpu: 250m
-        memory: 500Mi
+        memory: 512Mi
       limits:
-        cpu: 500m
+        cpu: "1"
         memory: 1Gi
     image:
-      repository: 6i7451y2.c1.de1.container-registry.ovh.net/dev-sprint-loic/api
+      repository: <REGISTRY>/100pac/api
       tag: latest
   chat:
-    host: chat.dev-sprint-loic.ds.io
+    host: chat.100pac.example.io
+    replicas: 1
     resources:
       requests:
-        cpu: 250m
-        memory: 500Mi
+        cpu: 100m
+        memory: 256Mi
       limits:
         cpu: 500m
-        memory: 1Gi
+        memory: 512Mi
+    # Même image que l'API (l'UI Streamlit y est incluse).
+    image:
+      repository: <REGISTRY>/100pac/api
+      tag: latest
+  # Artefacts générés (modèle Zarr + index vectoriel + rapport), fournis via un
+  # volume persistant monté sur l'API. Voir helm/README.md pour le provisionnement.
+  data:
+    mountPath: /data
+    zarrPath: /data/pac.zarr
+    chromaDir: /data/chroma
+    reportPdf: /data/Performance-PAC-Rapport-final.pdf
+    persistence:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 2Gi
+      storageClass: ""
   secrets:
     api:
       MISTRAL_API_KEY: "<REPLACE_WITH_YOUR_API_KEY>"
 
 registry:
   secrets:
-    dockerconfigjson: '{"auths":{"6i7451y2.c1.de1.container-registry.ovh.net": {"username":"poOaMvpTaX", "password": "<REPLACE_WITH_PASSWORD>"}}}'
+    dockerconfigjson: '{"auths":{"<REGISTRY>": {"username":"<USER>", "password": "<REPLACE_WITH_PASSWORD>"}}}'

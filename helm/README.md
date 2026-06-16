@@ -1,5 +1,52 @@
 # Chatbot infrastructure
 
+## Déploiement 100PAC — ce que contient le chart
+
+Le chart `chatbot/` déploie :
+
+- **Deployment `api`** (FastAPI, port 8000) — l'agent et ses outils. Lit la clé
+  `MISTRAL_API_KEY` depuis le secret, et les artefacts depuis un **volume de données**
+  monté en lecture seule (`PAC_ZARR_PATH`, `PAC_CHROMA_DIR`, `PAC_REPORT_PDF`).
+- **Deployment `chat`** (Streamlit, port 8501) — l'UI, qui parle à l'API via
+  `API_BASE_URL` (service interne).
+- **Services** ClusterIP + **Ingress** (TLS Let's Encrypt) pour les deux hôtes.
+- **Secret** (clé Mistral + credentials registre) et **PVC** des artefacts.
+
+### 1. Construire et pousser l'image
+
+```bash
+cd backend && scripts/build-docker-image --tag v1 --push
+# ou via le workflow GitHub Actions « CD » (workflow_dispatch).
+```
+
+### 2. Provisionner les artefacts sur le volume
+
+Les fichiers source (xlsx) et les artefacts générés (`pac.zarr`, index Chroma) ne sont
+**pas** dans l'image (volumineux / confidentiels). Générez-les puis copiez-les sur le PVC
+`<release>-data` (monté sur `/data`), par exemple :
+
+```bash
+# Génération locale (cf. backend/README.md) :
+cd backend && scripts/ingest-data && scripts/build-index
+
+# Copie vers un pod montant le PVC (ou via un Job d'init) :
+kubectl cp ../data/pac.zarr               <pod>:/data/pac.zarr
+kubectl cp store/chroma                   <pod>:/data/chroma
+kubectl cp ../docs/Performance-PAC-Rapport-final.pdf <pod>:/data/Performance-PAC-Rapport-final.pdf
+```
+
+### 3. Déployer
+
+Copiez `chatbot/example.values.yaml` en `chatbot/values.yaml`, renseignez le registre,
+la clé `MISTRAL_API_KEY` et les hôtes, puis :
+
+```bash
+helm upgrade --install 100pac helm/chatbot -f helm/chatbot/values.yaml
+```
+
+> Note : cette itération **prépare** le déploiement ; aucun `helm upgrade` n'est lancé
+> automatiquement.
+
 ## Prerequisites
 
 To develop within the `helm` directory, you will need:

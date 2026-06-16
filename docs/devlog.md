@@ -93,3 +93,17 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
   - `compute_performance` renvoie `period_effective` (vraies bornes) → plus de dates inventées.
 - [validation.md](validation.md) documente le dispositif et la conformité aux principes.
 - Bruit des warnings Zarr v3 filtré dans la config pytest.
+
+## 2026-06-16 — Phase 6 : préparation déploiement (sans déployer)
+
+- Constat : le chart Helm n'avait **aucun Deployment** (gap Task 1) → ajout de
+  `templates/deployment.yaml` (api FastAPI + chat Streamlit) et `templates/pvc.yaml`.
+- `chatbot.paths` : chemins surchargeables par env (`PAC_ZARR_PATH`, `PAC_CHROMA_DIR`,
+  `PAC_REPORT_PDF`) pour montage PVC en conteneur.
+- `example.values.yaml` : hôtes 100pac, image chat, bloc `data`/`persistence` (PVC).
+- Dockerfile : `CMD` corrigé sur `chatbot.api.app:app` (package installé).
+- CI (`.github/workflows/ci.yml`) : ruff + mypy + pytest (clé factice). CD
+  (`cd.yml`, workflow_dispatch) : build/push image + `helm upgrade` optionnel.
+- `helm/README.md` : procédure de déploiement + provisionnement des artefacts sur le PVC.
+- README racine réécrit (projet 100PAC). `helm lint` + `helm template` OK (PVC et emptyDir).
+- **Aucun déploiement effectif** (conforme à la portée retenue).

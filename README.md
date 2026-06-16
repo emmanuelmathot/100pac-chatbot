@@ -1,13 +1,51 @@
-# 👋 Welcome Developer! 🏃‍♀️
+# 🔥 Chatbot 100PAC
 
-Hey there! Welcome to the Chatbot skeleton project; we hope you have a great time!
+Chatbot **agentic** répondant à des questions sur l'audit énergétique ADEME/Enertech
+de **100 pompes à chaleur** (90 air/eau + 10 géothermiques) en résidentiel individuel —
+à partir du **rapport** d'audit et des **mesures** terrain.
 
-## Project Overview
+Le LLM (Mistral, via LangGraph) **orchestre** des outils déterministes ; il ne calcule
+ni n'invente jamais de chiffres. Voir les [principes directeurs](docs/devlog.md) (d'après
+Development Seed, [EGU26-19885](https://meetingorganizer.copernicus.org/EGU26/EGU26-19885.html)).
 
-We have recently been working on several projects that provide analysts with the ability to complete data exploration tasks using a conversational chatbot interface. Our partners' goal is to lower the barrier to entry for users who may not be familiar with traditional data analysis tools, and to make it easier for them to quickly get answers to their questions.
+## Architecture
 
-We'd like you to implement a similar chatbot interface that allows users to query and visualize data from a 100PAC report and dataset. But not from scratch - in this repository, we have a skeleton implementation that we'd like you to complete and deploy. This resembles how we would actually start such a project: building on our existing knowledge and tools and aiming for a deployable application from the get-go, so we can test our concepts continuously.
+- **Données → Zarr** ([docs/data-model.md](docs/data-model.md)) : modèle xarray
+  `logement × time` (100 logements, séries 1 min), agrégats horaires/journaliers/mensuels,
+  COP/SCOP. Sharding Zarr v3 (1 fichier/jour).
+- **Rapport → RAG** : extraction PyMuPDF + index vectoriel Chroma (`mistral-embed`),
+  citations section/page.
+- **Agent** : outils `search_report`, `describe_fleet`, `compute_performance`,
+  `query_measurement`, `plot_measurement`, `run_data_analysis` (analyse par code en bac
+  à sable). API FastAPI (stream NDJSON) + UI Streamlit.
 
-Please take a bit of time to (with our help) get to know the structure and see where you should add some missing pieces: first you should work out deployment with Helm and Kubernetes (Task 1), then add data loading and visualisation logic to the Langgraph application (Task 2), and maybe also continuous deployment with GitHub Actions (Task 3 - stretch!).
+## Démarrage rapide
 
+```bash
+cd backend
+cp .env.example .env          # renseigner MISTRAL_API_KEY
+scripts/install               # uv sync + install editable
+scripts/ingest-data           # construit data/pac.zarr (lit les xlsx)
+scripts/build-index           # construit l'index vectoriel du rapport
 
+scripts/api                   # terminal 1 — API   http://localhost:8000
+scripts/chat                  # terminal 2 — UI    http://localhost:8501
+```
+
+## Qualité
+
+```bash
+scripts/test      # tests unitaires (pytest)
+scripts/lint      # ruff + mypy
+scripts/validate  # questions de référence (LLM live) — voir docs/validation.md
+```
+
+## Déploiement
+
+Chart Helm dans [helm/](helm/) (Deployments api+chat, services, ingress TLS, secret, PVC).
+CI/CD GitHub Actions dans [.github/workflows/](.github/workflows/). Voir
+[helm/README.md](helm/README.md) pour le provisionnement des artefacts et le déploiement.
+
+## Journal
+
+Avancement détaillé : [docs/devlog.md](docs/devlog.md).

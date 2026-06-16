@@ -1,0 +1,17 @@
+{{- if .Values.chatbot.data.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-data
+  labels:
+    app: chatbot
+spec:
+  accessModes:
+    - {{ .Values.chatbot.data.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.chatbot.data.persistence.size | default "1Gi" }}
+  {{- with .Values.chatbot.data.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}

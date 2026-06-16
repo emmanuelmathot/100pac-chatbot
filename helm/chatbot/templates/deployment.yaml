@@ -1,0 +1,117 @@
+{{- $data := .Values.chatbot.data -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels:
+    app: chatbot
+    component: api
+spec:
+  replicas: {{ .Values.chatbot.api.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: chatbot
+      component: api
+  template:
+    metadata:
+      labels:
+        app: chatbot
+        component: api
+    spec:
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-credential
+      containers:
+        - name: api
+          image: "{{ .Values.chatbot.api.image.repository }}:{{ .Values.chatbot.api.image.tag }}"
+          command: ["uv", "run", "uvicorn", "chatbot.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: MISTRAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-api-secrets
+                  key: MISTRAL_API_KEY
+            # Artefacts montés depuis le volume de données (cf. PVC).
+            - name: PAC_ZARR_PATH
+              value: {{ $data.zarrPath | quote }}
+            - name: PAC_CHROMA_DIR
+              value: {{ $data.chromaDir | quote }}
+            - name: PAC_REPORT_PDF
+              value: {{ $data.reportPdf | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ $data.mountPath | quote }}
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.chatbot.api.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if $data.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-chat
+  labels:
+    app: chatbot
+    component: chat
+spec:
+  replicas: {{ .Values.chatbot.chat.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: chatbot
+      component: chat
+  template:
+    metadata:
+      labels:
+        app: chatbot
+        component: chat
+    spec:
+      imagePullSecrets:
+        - name: {{ .Release.Name }}-registry-credential
+      containers:
+        - name: chat
+          image: "{{ .Values.chatbot.chat.image.repository }}:{{ .Values.chatbot.chat.image.tag }}"
+          command:
+            - uv
+            - run
+            - streamlit
+            - run
+            - src/chatbot/chat/app.py
+            - --server.port=8501
+            - --server.address=0.0.0.0
+            - --server.headless=true
+          ports:
+            - name: http
+              containerPort: 8501
+          env:
+            # L'UI parle à l'API via le service interne du cluster.
+            - name: API_BASE_URL
+              value: "http://{{ .Release.Name }}-api-service:8000"
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.chatbot.chat.resources | nindent 12 }}

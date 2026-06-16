@@ -1,0 +1,45 @@
+name: CD
+
+# Déploiement manuel (stretch). Construit et pousse l'image, puis (optionnel)
+# applique le chart Helm. Nécessite des secrets de dépôt configurés :
+#   REGISTRY, REGISTRY_USER, REGISTRY_PASSWORD  (registre d'images)
+#   KUBE_CONFIG (base64 du kubeconfig) si deploy=true
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de l'image"
+        required: true
+        default: "latest"
+      deploy:
+        description: "Appliquer helm upgrade après le push ?"
+        type: boolean
+        default: false
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login au registre
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.REGISTRY }}/100pac/api:${{ inputs.tag }}
+
+      - name: Helm upgrade (optionnel)
+        if: ${{ inputs.deploy }}
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
+          helm upgrade --install 100pac helm/chatbot -f helm/chatbot/values.yaml --wait
