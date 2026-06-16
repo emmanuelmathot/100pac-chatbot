@@ -1,0 +1,52 @@
+# Déploiement 100PAC sur un hôte Docker (ex. NAS UGREEN) via docker compose.
+# Deux services depuis la même image : l'API (FastAPI) et l'UI (Streamlit).
+# Les artefacts (modèle Zarr, index vectoriel, rapport) sont montés en volumes
+# (générés au préalable — cf. README / docs/deploy-nas.md).
+
+services:
+  api:
+    build:
+      context: ./backend
+    image: ${IMAGE:-100pac-chatbot:latest}
+    container_name: 100pac-api
+    command: ["uv", "run", "uvicorn", "chatbot.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:?définissez MISTRAL_API_KEY dans .env}
+      PAC_ZARR_PATH: /data/pac.zarr
+      PAC_CHROMA_DIR: /data/chroma
+      PAC_REPORT_PDF: /data/report.pdf
+    volumes:
+      - ${PAC_ZARR_HOST:-./data/pac.zarr}:/data/pac.zarr:ro
+      - ${PAC_CHROMA_HOST:-./backend/store/chroma}:/data/chroma:ro
+      - ${PAC_REPORT_HOST:-./docs/Performance-PAC-Rapport-final.pdf}:/data/report.pdf:ro
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  chat:
+    image: ${IMAGE:-100pac-chatbot:latest}
+    container_name: 100pac-chat
+    command:
+      - uv
+      - run
+      - streamlit
+      - run
+      - src/chatbot/chat/app.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --server.headless=true
+    environment:
+      # L'UI parle à l'API via le réseau interne de compose.
+      API_BASE_URL: http://api:8000
+    ports:
+      - "${CHAT_PORT:-8501}:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

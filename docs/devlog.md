@@ -161,3 +161,14 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
   dupliqués en appels parallèles. Correctif : `bind_tools(..., parallel_tool_calls=False)`
   dans l'agent → un outil à la fois, séquentiellement.
 - Question rejouée : OK (1 appel, 4 citations, réponse synthétique). Tests/lint/mypy verts.
+
+## 2026-06-17 — Déploiement Docker Compose (NAS) + publication GHCR
+
+- `docker-compose.yml` : services `api` (FastAPI) + `chat` (Streamlit) depuis la même
+  image ; artefacts (Zarr, index, rapport) **montés en volumes** via `PAC_*` ; healthcheck
+  API ; ports/chemins/image paramétrables (`.env`).
+- **Validé localement** : `docker compose build` + `up` → api healthy, chat 200, question
+  parc répondue via le `pac.zarr` monté (10 géothermiques). ✓
+- Workflow `.github/workflows/docker-publish.yml` : build + push sur **GHCR**
+  (`ghcr.io/<owner>/100pac-chatbot`) sur `main`/tags, auth `GITHUB_TOKEN`, cache gha.
+- Guide [docs/deploy-nas.md](deploy-nas.md) + `.env.example` ; README mis à jour.
