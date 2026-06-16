@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+set -e
+
+# Construit l'index vectoriel du rapport (backend/store/chroma) via mistral-embed.
+uv run python -m chatbot.rag.index

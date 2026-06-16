@@ -42,3 +42,15 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
 - Sanity check `002026` : COP saison de chauffe (oct→avr) ≈ **2.26** vs SCOP déclaré 4.43 (écart réel typique).
   Voir [data-model.md](data-model.md) pour les conventions énergétiques et le caveat COP/SCOP estival.
 - lint (ruff) + mypy verts.
+
+## 2026-06-16 — Phase 2 : RAG du rapport
+
+- Modules `chatbot.rag.{extract,index}` + script `scripts/build-index`.
+- `extract` : PyMuPDF, 234 pages non vides extraites. Le PDF n'a pas de signets ;
+  détection heuristique des en-têtes (sous-sections `1.2.2`, titres `N. TITRE`, capitales)
+  reportée de page en page → **citations section + page** (92 sections distinctes).
+- `index` : découpage `RecursiveCharacterTextSplitter` (1200/200) → **564 fragments**,
+  embeddings `mistral-embed`, persistance Chroma dans `backend/store/` (gitignoré, régénérable).
+- Recherche sémantique testée : passages pertinents renvoyés avec leur source.
+- Clé Mistral fournie par l'utilisateur → `backend/.env` (gitignoré, jamais committé).
+- lint + mypy verts.
