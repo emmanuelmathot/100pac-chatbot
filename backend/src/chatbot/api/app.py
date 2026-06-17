@@ -52,33 +52,50 @@ async def stream_chat(
         }
     }
 
+    # Deux modes combinés :
+    # - "messages" : tokens du LLM au fil de l'eau (réponse progressive) ;
+    # - "updates"  : messages d'outils + changements d'état (citations, graphe...).
     stream = cast(
-        AsyncGenerator[dict[str, Any] | Any, None],
-        # This is where the actual chatbot is invoked
+        AsyncGenerator[tuple[str, Any], None],
         chatbot.astream(
             input={"messages": [HumanMessage(content=query)]},
             config=config,
-            stream_mode="updates",
+            stream_mode=["messages", "updates"],
         ),
     )
 
     try:
         async with aclosing(stream):
-            async for update in stream:
+            async for mode, data in stream:
                 if await request.is_disconnected():
                     logger.info("Client disconnected; stopping stream.")
                     break
 
-                agent = next(iter(update.keys()))
-                payload = update[agent]
+                if mode == "messages":
+                    # Tokens de la réponse de l'IA : on les renvoie un à un.
+                    chunk, _meta = data
+                    content = getattr(chunk, "content", None)
+                    if (
+                        chunk.__class__.__name__ == "AIMessageChunk"
+                        and isinstance(content, str)
+                        and content
+                    ):
+                        yield (json.dumps({"token": content}) + "\n").encode("utf-8")
+                    continue
 
-                # Yield all 'messages' as their JSON representation
+                # mode == "updates"
+                agent = next(iter(data.keys()))
+                payload = data[agent]
+
                 for msg in payload.get("messages", []):
+                    # La réponse de l'IA est déjà streamée token par token ;
+                    # on ne ré-émet pas son contenu (sinon affiché en double).
+                    if msg.__class__.__name__ == "AIMessage":
+                        continue
                     line = json.dumps(msg.to_json()) + "\n"
                     logger.info(line)
                     yield line.encode("utf-8")
 
-                # Yield anything else (state updates) as their JSON representaion
                 for key, value in (
                     (k, v) for k, v in payload.items() if k != "messages"
                 ):

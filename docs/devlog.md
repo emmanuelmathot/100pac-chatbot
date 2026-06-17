@@ -176,3 +176,13 @@ Système agentic « production grade » (cf. Development Seed, EGU26-19885) :
   backend par hostname) : config dynamique `deploy/traefik/100pac.mathot.org.yml`
   (route `100pac.mathot.org` -> `http://nas-manu-et:8501`), calquée sur `mail.mathot.org.yml`.
   UI Streamlit : flags `enableCORS/enableXsrfProtection=false` ajoutés (TLS terminé par Traefik).
+
+## 2026-06-17 — Streaming de la réponse (UX démo)
+
+- Problème : en mode `updates`, la réponse n'apparaissait qu'une fois entièrement générée
+  → impression de blocage après l'affichage des outils.
+- API (`stream_chat`) : modes combinés `["messages", "updates"]` → renvoie les **tokens**
+  de l'IA au fil de l'eau (`{"token": …}`), sans ré-émettre le message IA complet (anti-doublon).
+- UI : affichage **progressif** de la réponse (curseur `▌`) + indicateur « ✍️ Je rédige… »
+  après les outils.
+- Validé : 548 tokens streamés, 0 message IA dupliqué, citations/outil affichés avant.

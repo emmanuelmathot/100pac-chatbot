@@ -136,9 +136,17 @@ def handle_user_query(user_input: str):
         )
         return
 
-    placeholder = st.empty()
-    with placeholder.container():
-        st.chat_message("assistant", avatar="🤖").markdown("🤔 Je réfléchis…")
+    status = st.empty()
+
+    def set_status(text: str):
+        status.empty()
+        with status.container():
+            st.chat_message("assistant", avatar="🤖").markdown(text)
+
+    set_status("🤔 Je réfléchis…")
+
+    answer = ""
+    answer_box = None  # placeholder de la réponse streamée (créé au 1er token)
 
     try:
         for line in response.iter_lines(decode_unicode=True):
@@ -149,9 +157,19 @@ def handle_user_query(user_input: str):
             except Exception:
                 continue
 
+            # 1) Tokens de la réponse : affichage progressif.
+            if "token" in msg:
+                if answer_box is None:
+                    status.empty()
+                    answer_box = st.chat_message("assistant", avatar="🤖").empty()
+                answer += msg["token"]
+                answer_box.markdown(answer + " ▌")
+                continue
+
+            # 2) Changements d'état (citations, graphe, traçabilité).
             if "state_change" in msg:
                 state_payload = msg["state_change"]
-                placeholder.empty()
+                status.empty()
                 with st.chat_message("state", avatar="📊"):
                     for key, value in state_payload.items():
                         plain_label = state_label(key)
@@ -176,33 +194,32 @@ def handle_user_query(user_input: str):
                 st.session_state.messages.append(
                     {"role": "state", "content": state_payload}
                 )
+                set_status("✍️ Je rédige la réponse…")
                 continue
 
+            # 3) Messages complets : sorties d'outils (l'IA est déjà streamée).
             kwargs = msg.get("kwargs", {})
             msg_type = kwargs.get("type", "assistant")
             content = kwargs.get("content", "")
             tool_name = kwargs.get("name", "Tool Output")
 
-            if msg_type == "human" or not content.strip():
-                continue
+            if msg_type in ("human", "ai") or not content.strip():
+                continue  # ai = déjà affiché token par token
 
-            role = "assistant" if msg_type == "ai" else "tool"
-            avatar = "🤖" if role == "assistant" else "🛠️"
-
-            placeholder.empty()
-            with st.chat_message(role, avatar=avatar):
-                if role == "tool":
-                    with st.expander(label=f"{tool_name}", expanded=False):
-                        st.markdown(content)
-                else:
+            status.empty()
+            with st.chat_message("tool", avatar="🛠️"):
+                with st.expander(label=f"{tool_name}", expanded=False):
                     st.markdown(content)
+            st.session_state.messages.append(
+                {"role": "tool", "content": {"name": tool_name, "body": content}}
+            )
+            set_status("✍️ Je rédige la réponse…")
 
-            if role == "tool":
-                st.session_state.messages.append(
-                    {"role": role, "content": {"name": tool_name, "body": content}}
-                )
-            else:
-                st.session_state.messages.append({"role": role, "content": content})
+        # Finalisation de la réponse streamée (retire le curseur, sauvegarde).
+        status.empty()
+        if answer_box is not None and answer:
+            answer_box.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
     except requests.exceptions.ChunkedEncodingError:
         st.warning("⚠️ Connexion interrompue ; réponse partielle affichée.")
     finally:
