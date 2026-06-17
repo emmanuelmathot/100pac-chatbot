@@ -74,6 +74,14 @@ scripts/validate  # questions de référence (LLM live) — voir docs/validation
   ingress TLS, secret, PVC) — voir [helm/README.md](helm/README.md).
 - **CI** : ruff + mypy + pytest ([ci.yml](.github/workflows/ci.yml)).
 
+## Documentation
+
+- [docs/rag-explained.md](docs/rag-explained.md) — **le RAG expliqué simplement**
+  (tokenisation, embeddings, Chroma, inférence) pour novices.
+- [docs/data-model.md](docs/data-model.md) — modèle de données Zarr.
+- [docs/validation.md](docs/validation.md) — tests & validation métier.
+- [docs/deploy-nas.md](docs/deploy-nas.md) — déploiement Docker/NAS.
+
 ## Journal
 
 Avancement détaillé : [docs/devlog.md](docs/devlog.md).
