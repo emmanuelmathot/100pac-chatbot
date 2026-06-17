@@ -59,10 +59,12 @@ entre fragments voisins (pour ne pas couper une idée en plein milieu). Outil :
 chacun étiqueté avec sa page et sa section.
 
 > **Tokenisation ?** Les modèles ne lisent pas des caractères mais des *tokens* :
-> des morceaux de mots (« chauffage » peut devenir `chauff` + `age`). C'est l'unité
-> que comptent les modèles (et la facturation). Notre découpage est fait en
-> caractères par simplicité, mais l'idée est la même : produire des morceaux de
-> taille raisonnable pour le modèle d'embeddings.
+> des unités qui sont souvent des **sous-mots**. Un mot courant est généralement un
+> seul token, tandis qu'un mot rare ou long peut être découpé en plusieurs morceaux.
+> Le découpage exact n'est pas universel : il dépend du *tokenizer* propre à chaque
+> modèle (Mistral a le sien). Le token est l'unité que comptent les modèles (et la
+> facturation). Notre découpage en fragments est fait en **caractères** par
+> simplicité, mais l'idée est la même : produire des morceaux de taille raisonnable.
 
 ### (3) Embeddings : transformer le texte en vecteurs
 
