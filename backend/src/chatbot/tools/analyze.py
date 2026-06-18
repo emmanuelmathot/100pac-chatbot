@@ -9,6 +9,7 @@ revient au contexte, et le **code est persisté** dans l'état (provenance/audit
 
 from __future__ import annotations
 
+import ast
 import io
 from contextlib import redirect_stdout
 from typing import Annotated
@@ -69,6 +70,25 @@ def _summarize(value: object) -> str:
     return text[:_MAX_OUTPUT] + (" …(tronqué)" if len(text) > _MAX_OUTPUT else "")
 
 
+def _exec_capturing_last(code: str, env: dict) -> object:
+    """Exécute ``code`` et renvoie la valeur de la dernière expression (façon REPL).
+
+    Si la dernière instruction est une simple expression (ex. ``fleet.head()``),
+    sa valeur est renvoyée comme résultat implicite — sinon on retombe sur la
+    variable ``result``. Cela évite que les introspections sans affectation
+    (``fleet.columns.tolist()``) ne renvoient « aucun résultat ».
+    """
+    tree = ast.parse(code, mode="exec")
+    last_value = None
+    if tree.body and isinstance(tree.body[-1], ast.Expr):
+        last_expr = ast.Expression(tree.body.pop().value)
+        exec(compile(tree, "<analysis>", "exec"), env)  # noqa: S102
+        last_value = eval(compile(last_expr, "<analysis>", "eval"), env)  # noqa: S307
+    else:
+        exec(compile(tree, "<analysis>", "exec"), env)  # noqa: S102
+    return last_value if last_value is not None else env.get("result")
+
+
 @tool("run_data_analysis")
 async def run_data_analysis(
     code: str,
@@ -81,7 +101,9 @@ async def run_data_analysis(
       - ``fleet`` : DataFrame des 100 logements (index = identifiant logement).
       - ``raw``, ``hourly``, ``daily``, ``monthly`` : xarray.Dataset (dims logement × time).
       - ``np``, ``pd`` : numpy, pandas.
-    Affecte le résultat à une variable nommée ``result`` (ou utilise ``print``).
+    Affecte le résultat à ``result``, ou laisse une expression en dernière ligne
+    (comme un notebook) : ``fleet.columns.tolist()`` ou ``fleet.head()`` renvoient
+    leur valeur. ``print`` est aussi capturé.
     Pas d'import, pas d'accès fichier/réseau. Exemple :
       ``result = float(daily['t_meteo'].sel(logement='002026').mean())``
     """
@@ -98,8 +120,8 @@ async def run_data_analysis(
     stdout = io.StringIO()
     try:
         with redirect_stdout(stdout):
-            exec(code, env)  # noqa: S102 — exécution volontaire en environnement restreint
-        out = _summarize(env.get("result"))
+            value = _exec_capturing_last(code, env)
+        out = _summarize(value)
         printed = stdout.getvalue().strip()
         content = "\n".join(p for p in (printed, out) if p) or "(aucun résultat)"
         status = "ok"
@@ -124,3 +146,23 @@ async def run_data_analysis(
             ],
         }
     )
+
+
+# Description de base, sans le schéma (qui dépend des données chargées au runtime).
+_BASE_DESCRIPTION = run_data_analysis.description
+
+
+def enrich_with_fleet_schema() -> None:
+    """Injecte la liste réelle des colonnes de ``fleet`` dans la description du tool.
+
+    Le modèle devine sinon des noms de colonnes inexistants (``puissance_installee_kw``…)
+    et enchaîne les ``KeyError``. Idempotent : reconstruit depuis la description de base.
+    """
+    try:
+        df = access.fleet_dataframe()
+        cols = ", ".join(f"{c} ({df[c].dtype})" for c in df.columns)
+        run_data_analysis.description = (
+            f"{_BASE_DESCRIPTION}\n\nColonnes de `fleet` : {cols}."
+        )
+    except Exception:  # noqa: BLE001 — schéma indisponible : on garde la description de base
+        run_data_analysis.description = _BASE_DESCRIPTION

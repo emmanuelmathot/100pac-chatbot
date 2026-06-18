@@ -5,7 +5,7 @@ from langgraph.prebuilt import create_react_agent
 
 from chatbot.agent.state import AgentState
 from chatbot.llm import mistral_small
-from chatbot.tools.analyze import run_data_analysis
+from chatbot.tools.analyze import enrich_with_fleet_schema, run_data_analysis
 from chatbot.tools.data import (
     compare_fleet_performance,
     compute_performance,
@@ -48,6 +48,9 @@ Règles impératives :
 
 
 async def create_agent() -> CompiledStateGraph:
+    # Expose le schéma réel de `fleet` au modèle (évite les KeyError sur noms devinés).
+    enrich_with_fleet_schema()
+
     tools: list[BaseTool] = [
         search_report,
         show_report_figure,

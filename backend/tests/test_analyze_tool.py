@@ -1,6 +1,6 @@
 """Tests du tool d'analyse par code : exécution valide et bac à sable restreint."""
 
-from chatbot.tools.analyze import run_data_analysis
+from chatbot.tools.analyze import enrich_with_fleet_schema, run_data_analysis
 
 
 async def _run(code: str) -> dict:
@@ -39,3 +39,16 @@ async def test_computation_on_dataset(synthetic_store):
     )
     assert update["provenance"][0]["status"] == "ok"
     assert update["messages"][0].content == "4000.0"
+
+
+async def test_last_expression_is_captured(synthetic_store):
+    # Pas d'affectation à `result` : la dernière expression doit être renvoyée.
+    update = await _run("fleet.columns.tolist()")
+    assert update["provenance"][0]["status"] == "ok"
+    assert update["messages"][0].content != "(aucun résultat)"
+    assert "(aucun résultat)" not in update["messages"][0].content
+
+
+async def test_enrich_with_fleet_schema_lists_columns(synthetic_store):
+    enrich_with_fleet_schema()
+    assert "Colonnes de `fleet`" in run_data_analysis.description
