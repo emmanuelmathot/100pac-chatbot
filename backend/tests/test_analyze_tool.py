@@ -52,3 +52,10 @@ async def test_last_expression_is_captured(synthetic_store):
 async def test_enrich_with_fleet_schema_lists_columns(synthetic_store):
     enrich_with_fleet_schema()
     assert "Colonnes de `fleet`" in run_data_analysis.description
+
+
+async def test_common_builtins_available(synthetic_store):
+    # isinstance/type sont des idiomes courants : ils doivent être disponibles.
+    update = await _run("result = isinstance('10.9', str) and type(3) is int")
+    assert update["provenance"][0]["status"] == "ok"
+    assert update["messages"][0].content == "True"

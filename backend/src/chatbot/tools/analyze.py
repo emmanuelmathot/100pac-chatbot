@@ -34,21 +34,32 @@ _SAFE_BUILTINS = {
         "any",
         "bool",
         "dict",
+        "divmod",
         "enumerate",
+        "filter",
         "float",
+        "format",
+        "frozenset",
+        "hasattr",
         "int",
+        "isinstance",
         "len",
         "list",
+        "map",
         "max",
         "min",
+        "pow",
         "print",
         "range",
+        "repr",
+        "reversed",
         "round",
         "set",
         "sorted",
         "str",
         "sum",
         "tuple",
+        "type",
         "zip",
     )
 }
@@ -104,7 +115,10 @@ async def run_data_analysis(
     Affecte le résultat à ``result``, ou laisse une expression en dernière ligne
     (comme un notebook) : ``fleet.columns.tolist()`` ou ``fleet.head()`` renvoient
     leur valeur. ``print`` est aussi capturé.
-    Pas d'import, pas d'accès fichier/réseau. Exemple :
+    Pas d'import, pas d'accès fichier/réseau. Certaines colonnes numériques de
+    ``fleet`` sont de type ``object`` (chaînes comme ``'10.9'``) : convertis-les
+    avec ``pd.to_numeric(fleet[col], errors='coerce')`` plutôt qu'à la main.
+    Exemple :
       ``result = float(daily['t_meteo'].sel(logement='002026').mean())``
     """
     env = {
