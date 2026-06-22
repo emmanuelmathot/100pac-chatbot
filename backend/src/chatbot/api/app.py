@@ -53,7 +53,9 @@ async def stream_chat(
     }
 
     # Question de l'utilisateur : tracée pour retrouver les requêtes dans les logs.
-    logger.info(json.dumps({"user_query": {"thread_id": str(thread_id), "query": query}}))
+    logger.info(
+        json.dumps({"user_query": {"thread_id": str(thread_id), "query": query}})
+    )
 
     # Deux modes combinés :
     # - "messages" : tokens du LLM au fil de l'eau (réponse progressive) ;
